@@ -1,0 +1,524 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Vault — Password Manager</title>
+    <link href="https://fonts.googleapis.com/css2?family=DM+Serif+Display&family=DM+Sans:wght@300;400;500&display=swap" rel="stylesheet">
+    <style>
+        *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+        :root {
+            --bg: #f7f5f2;
+            --surface: #ffffff;
+            --border: #e8e4df;
+            --text: #1a1814;
+            --muted: #9c9488;
+            --accent: #275a56;
+            --accent-light: #eef4ed;
+            --accent-hover: #24675b;
+            --danger: #c0392b;
+            --danger-light: #fdf0ef;
+            --shadow: 0 1px 3px rgba(0,0,0,0.06), 0 4px 16px rgba(0,0,0,0.04);
+            --radius: 12px;
+            --radius-sm: 8px;
+        }
+
+        body {
+            font-family: 'DM Sans', sans-serif;
+            background: var(--bg);
+            color: var(--text);
+            min-height: 100vh;
+            padding: 40px 20px;
+        }
+
+        .page { max-width: 560px; margin: 0 auto; }
+
+        .header {
+            margin-bottom: 36px;
+            opacity: 0;
+            animation: fadeUp 0.6s ease forwards;
+        }
+
+        .header-top {
+            display: flex;
+            align-items: center;
+            gap: 12px;
+            margin-bottom: 4px;
+        }
+
+        .logo {
+            width: 36px;
+            height: 36px;
+            background: var(--accent);
+            border-radius: 10px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+        }
+
+        .logo svg {
+            width: 18px;
+            height: 18px;
+            fill: none;
+            stroke: white;
+            stroke-width: 2;
+            stroke-linecap: round;
+        }
+
+        h1 {
+            font-family: 'DM Serif Display', serif;
+            font-size: 26px;
+            font-weight: 400;
+            letter-spacing: -0.3px;
+        }
+
+        .subtitle {
+            font-size: 13px;
+            color: var(--muted);
+            margin-left: 48px;
+        }
+
+        .card {
+            background: var(--surface);
+            border: 1px solid var(--border);
+            border-radius: var(--radius);
+            box-shadow: var(--shadow);
+            padding: 28px;
+            margin-bottom: 16px;
+            opacity: 0;
+            animation: fadeUp 0.6s ease forwards 0.1s;
+        }
+
+        .card-title {
+            font-size: 11px;
+            font-weight: 500;
+            letter-spacing: 0.08em;
+            text-transform: uppercase;
+            color: var(--muted);
+            margin-bottom: 20px;
+        }
+
+        .field { margin-bottom: 16px; }
+
+        label {
+            display: block;
+            font-size: 13px;
+            font-weight: 500;
+            margin-bottom: 6px;
+        }
+
+        input {
+            width: 100%;
+            padding: 10px 14px;
+            border: 1px solid var(--border);
+            border-radius: var(--radius-sm);
+            font-family: 'DM Sans', sans-serif;
+            font-size: 14px;
+            color: var(--text);
+            background: var(--bg);
+            transition: border-color 0.2s, box-shadow 0.2s;
+            outline: none;
+        }
+
+        input:focus {
+            border-color: var(--accent);
+            box-shadow: 0 0 0 3px rgba(39, 90, 86, 0.08);
+            background: white;
+        }
+
+        input::placeholder { color: var(--muted); }
+
+        .password-wrap { position: relative; }
+        .password-wrap input { padding-right: 44px; }
+
+        .toggle-vis {
+            position: absolute;
+            right: 12px;
+            top: 50%;
+            transform: translateY(-50%);
+            background: none;
+            border: none;
+            cursor: pointer;
+            color: var(--muted);
+            padding: 4px;
+            display: flex;
+            align-items: center;
+            transition: color 0.2s;
+        }
+
+        .toggle-vis:hover { color: var(--text); }
+
+        .btn-primary {
+            width: 100%;
+            padding: 11px;
+            background: var(--accent);
+            color: white;
+            border: none;
+            border-radius: var(--radius-sm);
+            font-family: 'DM Sans', sans-serif;
+            font-size: 14px;
+            font-weight: 500;
+            cursor: pointer;
+            transition: background 0.2s, transform 0.1s;
+            margin-top: 4px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            gap: 8px;
+        }
+
+        .btn-primary:hover { background: var(--accent-hover); }
+        .btn-primary:active { transform: scale(0.99); }
+
+        .toast {
+            position: fixed;
+            bottom: 24px;
+            left: 50%;
+            transform: translateX(-50%) translateY(80px);
+            background: var(--text);
+            color: white;
+            padding: 10px 20px;
+            border-radius: 100px;
+            font-size: 13px;
+            font-weight: 500;
+            transition: transform 0.3s cubic-bezier(0.34, 1.56, 0.64, 1);
+            z-index: 100;
+            white-space: nowrap;
+        }
+
+        .toast.show { transform: translateX(-50%) translateY(0); }
+
+        .list-card {
+            background: var(--surface);
+            border: 1px solid var(--border);
+            border-radius: var(--radius);
+            box-shadow: var(--shadow);
+            overflow: hidden;
+            opacity: 0;
+            animation: fadeUp 0.6s ease forwards 0.2s;
+        }
+
+        .list-header {
+            padding: 20px 24px 16px;
+            border-bottom: 1px solid var(--border);
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+        }
+
+        .list-title {
+            font-size: 11px;
+            font-weight: 500;
+            letter-spacing: 0.08em;
+            text-transform: uppercase;
+            color: var(--muted);
+        }
+
+        .list-count {
+            font-size: 13px;
+            font-weight: 500;
+            margin-top: 2px;
+        }
+
+        .search-wrap { position: relative; }
+
+        .search-wrap svg {
+            position: absolute;
+            left: 10px;
+            top: 50%;
+            transform: translateY(-50%);
+            color: var(--muted);
+            pointer-events: none;
+        }
+
+        #searchInput {
+            width: 160px;
+            padding: 7px 12px 7px 32px;
+            font-size: 13px;
+            border-radius: 100px;
+        }
+
+        .entry {
+            padding: 16px 24px;
+            border-bottom: 1px solid var(--border);
+            display: flex;
+            align-items: center;
+            gap: 14px;
+            transition: background 0.15s;
+            animation: fadeUp 0.4s ease forwards;
+            opacity: 0;
+        }
+
+        .entry:last-child { border-bottom: none; }
+        .entry:hover { background: var(--bg); }
+
+        .entry-favicon {
+            width: 36px;
+            height: 36px;
+            background: var(--accent-light);
+            border-radius: 10px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 14px;
+            font-weight: 600;
+            color: var(--accent);
+            flex-shrink: 0;
+            text-transform: uppercase;
+        }
+
+        .entry-info { flex: 1; min-width: 0; }
+
+        .entry-site {
+            font-size: 14px;
+            font-weight: 500;
+            white-space: nowrap;
+            overflow: hidden;
+            text-overflow: ellipsis;
+        }
+
+        .entry-username {
+            font-size: 12px;
+            color: var(--muted);
+            margin-top: 1px;
+        }
+
+        .entry-pwd {
+            font-size: 13px;
+            color: var(--muted);
+            font-family: monospace;
+            letter-spacing: 2px;
+        }
+
+        .toggleBtn {
+            background: none;
+            border: 1px solid var(--border);
+            border-radius: 6px;
+            padding: 3px 10px;
+            font-size: 12px;
+            cursor: pointer;
+            color: var(--muted);
+            font-family: 'DM Sans', sans-serif;
+            transition: background 0.15s, color 0.15s;
+        }
+
+        .toggleBtn:hover {
+            background: var(--accent-light);
+            color: var(--accent);
+            border-color: var(--accent);
+        }
+
+       
+        .deleteBtn {
+            background: none;
+            border: 1px solid var(--border);
+            border-radius: 6px;
+            padding: 3px 10px;
+            font-size: 12px;
+            cursor: pointer;
+            color: var(--muted);
+            font-family: 'DM Sans', sans-serif;
+            transition: background 0.15s, color 0.15s;
+            margin-left: 4px;
+        }
+
+        .deleteBtn:hover {
+            background: var(--danger-light);
+            color: var(--danger);
+            border-color: var(--danger);
+        }
+
+        .empty {
+            padding: 48px 24px;
+            text-align: center;
+            color: var(--muted);
+            font-size: 13px;
+        }
+
+        @keyframes fadeUp {
+            from { opacity: 0; transform: translateY(10px); }
+            to { opacity: 1; transform: translateY(0); }
+        }
+    </style>
+</head>
+<body>
+    <div class="page">
+
+        <div class="header">
+            <div class="header-top">
+                <div class="logo">
+                    <svg viewBox="0 0 24 24"><rect x="3" y="11" width="18" height="11" rx="2"/><path d="M7 11V7a5 5 0 0 1 10 0v4"/></svg>
+                </div>
+                <h1>Vault</h1>
+            </div>
+            <p class="subtitle">Your passwords, safe and simple</p>
+        </div>
+
+        <div class="card">
+            <p class="card-title">Add new password</p>
+
+            <div class="field">
+                <label for="Website">Website</label>
+                <input id="Website" placeholder="e.g. google.com" autocomplete="off">
+            </div>
+
+            <div class="field">
+                <label for="Username">Username or email</label>
+                <input id="Username" placeholder="e.g. john@gmail.com" autocomplete="off">
+            </div>
+
+            <div class="field">
+                <label for="Password">Password</label>
+                <div class="password-wrap">
+                    <input type="password" id="Password" placeholder="Enter password" autocomplete="off">
+                    <button class="toggle-vis" onclick="toggleInputVis(this)" type="button">
+                        <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round">
+                            <path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z"/><circle cx="12" cy="12" r="3"/>
+                        </svg>
+                    </button>
+                </div>
+            </div>
+
+            <button class="btn-primary" id="saveBtn">Save Password</button>
+        </div>
+
+        <div class="list-card">
+            <div class="list-header">
+                <div>
+                    <div class="list-title">Saved passwords</div>
+                    <div class="list-count" id="countLabel">0 entries</div>
+                </div>
+                <!-- Search bar -->
+                <div class="search-wrap">
+                    <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round">
+                        <circle cx="11" cy="11" r="8"/><path d="m21 21-4.35-4.35"/>
+                    </svg>
+                    <input id="searchInput" placeholder="Search..." oninput="filterPasswords()">
+                </div>
+            </div>
+            <div id="output"></div>
+        </div>
+
+    </div>
+
+    <div class="toast" id="toast"></div>
+
+    <script>
+        let allPasswords = []; 
+        function showToast(msg) {
+            const t = document.getElementById('toast');
+            t.textContent = msg;
+            t.classList.add('show');
+            setTimeout(() => t.classList.remove('show'), 2500);
+        }
+
+        function toggleInputVis(btn) {
+            const input = btn.previousElementSibling;
+            input.type = input.type === 'password' ? 'text' : 'password';
+        }
+
+        
+        document.getElementById("saveBtn").onclick = function() {
+            let website = document.getElementById("Website").value;
+            let username = document.getElementById("Username").value;
+            let password = document.getElementById("Password").value;
+
+            if (!website || !username || !password) {
+                showToast('Please fill in all fields');
+                return;
+            }
+
+            fetch("http://127.0.0.1:5000/save-password", {
+                method: "POST",
+                headers: { "Content-Type": "application/json" },
+                body: JSON.stringify({ website, username, password })
+            })
+            .then(response => response.json())
+            .then(data => {
+                showToast(data.message);
+                loadPasswords();
+            });
+
+            document.getElementById("Website").value = "";
+            document.getElementById("Username").value = "";
+            document.getElementById("Password").value = "";
+        };
+
+     
+        function loadPasswords() {
+            fetch("http://127.0.0.1:5000/get-passwords")
+            .then(response => response.json())
+            .then(passwords => {
+                allPasswords = passwords; 
+                renderPasswords(passwords);
+            });
+        }
+
+        
+        function renderPasswords(passwords) {
+            const count = document.getElementById('countLabel');
+            count.textContent = `${allPasswords.length} ${allPasswords.length === 1 ? 'entry' : 'entries'}`;
+
+            if (passwords.length === 0) {
+                document.getElementById("output").innerHTML = '<div class="empty">No passwords saved yet</div>';
+                return;
+            }
+
+            let output = "";
+            passwords.forEach(function(entry, i) {
+                output +=
+                    "<div class='entry' style='animation-delay:" + (i * 0.05) + "s'>" +
+                        "<div class='entry-favicon'>" + entry.website.charAt(0).toUpperCase() + "</div>" +
+                        "<div class='entry-info'>" +
+                            "<div class='entry-site'>" + entry.website + "</div>" +
+                            "<div class='entry-username'>" + entry.username + "</div>" +
+                        "</div>" +
+                        "<span class='entry-pwd pwd' data-pass='" + entry.password + "'>••••••••</span> " +
+                        "<button class='toggleBtn' onclick='togglePassword(this)'>Show</button>" +
+                        "<button class='deleteBtn' onclick='deletePassword(this)'>Delete</button>" +
+                    "</div>";
+            });
+            document.getElementById("output").innerHTML = output;
+        }
+
+        
+        function filterPasswords() {
+            let q = document.getElementById('searchInput').value.toLowerCase();
+            let filtered = allPasswords.filter(function(p) {
+                return p.website.toLowerCase().includes(q) ||
+                       p.username.toLowerCase().includes(q);
+            });
+            renderPasswords(filtered);
+        }
+
+        
+        function togglePassword(btn) {
+            let span = btn.previousElementSibling;
+            if (btn.innerText === "Show") {
+                span.innerText = span.getAttribute("data-pass");
+                btn.innerText = "Hide";
+            } else {
+                span.innerText = "••••••••";
+                btn.innerText = "Show";
+            }
+        }
+
+        
+        function deletePassword(btn) {
+            if (!confirm('Delete this password?')) return;
+            let entry = btn.closest('.entry');
+            entry.style.opacity = '0';
+            entry.style.transition = 'opacity 0.2s';
+            setTimeout(() => {
+                entry.remove();
+                showToast('Password deleted');
+            }, 200);
+        }
+
+        window.onload = function() {
+            loadPasswords();
+        };
+    </script>
+</body>
+</html>
